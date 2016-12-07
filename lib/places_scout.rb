@@ -109,7 +109,7 @@ module PlacesScout
                       ""
                  end
 
-        path = (opts[:clientid] && params[:locationid] == "" && all == "") ? "/rankingreports/#{opts[:clientid]}/allbyclient" : "/rankingreports#{all}#{opts[:reportid]}#{rundates}#{runs}#{newest}#{runid}#{summary}#{historical}#{keywords}#{keywordresults}#{keywordresultsid}#{keywordserpscreenshot}"     
+        path = (opts[:clientid] && params[:locationid] == "" && all == "") ? "/rankingreports/#{opts[:clientid]}/allbyclient" : "/rankingreports#{all}#{reportid}#{rundates}#{runs}#{newest}#{runid}#{summary}#{historical}#{keywords}#{keywordresults}#{keywordresultsid}#{keywordserpscreenshot}"     
         params[:Keyword] = opts[:keywordserpscreenshot] if opts[:keywordserpscreenshot]
         params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
         params[:page] = opts[:page] || 1
