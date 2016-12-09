@@ -98,7 +98,7 @@ module PlacesScout
         summary = (opts[:summary] && opts[:runid] && opts[:runs] && rundates == "" && all == "") ? "/summarymetrics" : ""
         keywordresults = (opts[:keywordresults] && opts[:runid] && opts[:runs] && opts[:reportid] && rundates =="" && summary == "" && all == "") ? "/keywordsearchresults" : ""
         keywordresultsid = (opts[:keywordresultsid] && opts[:keywordresults] && opts[:runid] && opts[:runs] && opts[:reportid] && rundates =="" && summary == "" && all == "") ? "/#{opts[:keywordresultsid]}" : ""
-        keywordserpscreenshot = (opts[:runid] && opts[:runs] && opts[:reportid] && rundates == "" && keywordresults == "" && keywordresultsid == "" && summary == "" && all == "") ? "/keywordserpscreenshot" : ""
+        keywordserpscreenshot = (opts[:runid] && opts[:runs] && opts[:reportid] && opts[:googlelocation] && rundates == "" && keywordresults == "" && keywordresultsid == "" && summary == "" && all == "") ? "/keywordserpscreenshot" : ""
         
         newest = case opts[:newest]
                   when opts[:newest] = true  
