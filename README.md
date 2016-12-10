@@ -70,6 +70,97 @@ testcon.get_ranking_reports(:reportid => 'report-id', :runs => true, :newest => 
 ```ruby
 testcon.get_status #Grab the status of all reports
 ```
+## Sample Code
+```ruby
+clients = get_clients_and_ids(testcon) #Grab all clients
+add_report_ids(clients, testcon) #Grab report ID's per client
+add_report_run_ids(clients, testcon) # Grab run  per report
+get_run_rankings(clients, testcon) # Grab results per run
+puts clients[0][:reports][0][:runs][0][:rankings][0] # Return first client, report, run, keyword ranks
+
+
+def get_clients_and_ids(testcon)
+    clients = []
+    results = testcon.get_clients()  
+
+    results.each do |result|
+        result['items'].each do |item|
+          clients.push(:name => item['name'], :id => item['id'])
+        end
+    end
+
+    return clients
+end
+
+def add_report_ids(clients, testcon)
+    clients.each do |client|
+        report_ids = []
+        rankings = testcon.get_ranking_reports(:clientid => client[:id])
+        rankings.each do |rank|
+            rank['items'].each do |item|
+                report_ids.push(:id => item['rankingReport']['id']) 
+            end
+        end
+        client[:reports] = report_ids
+    end
+    return clients
+end
+
+def add_report_run_ids(clients, testcon)
+    clients.each do |client|
+        run_id_date = []
+        client[:reports].each do |report|
+            report_runs = testcon.get_ranking_reports(:reportid => report[:id], :rundates => true)
+                report_runs.each do |runs|
+                    runs['items'].each do |run|
+                        run_id_date.push(:runID => run['runId'], :runDate => parse_date(run['runDate']))
+                    end
+                end
+             report[:runs] = run_id_date
+        end
+    end
+end
+
+def get_run_rankings(clients, testcon)
+    clients.each do |client|
+        client[:reports].each do |report|            
+            report[:runs].each do |run|
+            keyword_rankings = []
+                report_runs = testcon.get_ranking_reports(:reportid => report[:id], :runs => true, :runid => run[:runID])
+                    report_runs.each do |report_run|
+                        report_run['keywordRankingResults'].each do |results|
+                            results[1].each do |result|
+                                google_rankings = []
+                                bing_rankings = []
+                                result['keywordSearch']['keyword']
+
+                                result['googleOrganicRankings'].each do |g_rank|
+                                    google_rankings.push(g_rank['rank'])
+                                end
+
+                                result['bingOrganicRankings'].each do |b_rank|
+                                    bing_rankings.push(b_rank['rank'])
+                                end
+
+                                keyword_rankings.push(:keyword => result['keywordSearch']['keyword'], :google_rank => google_rankings, :bing_rank => bing_rankings)
+
+                            end
+                        end
+                    end
+                run[:rankings] = keyword_rankings
+            end
+        end
+    end
+end
+
+
+def parse_date(datestring)
+  seconds_since_epoch = datestring.scan(/[0-9]+/)[0].to_i / 1000.0
+  return Time.at(seconds_since_epoch)
+end
+
+```
+
 
 ## Development
 
