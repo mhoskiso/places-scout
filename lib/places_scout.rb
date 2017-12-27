@@ -13,7 +13,7 @@ module PlacesScout
 
     def initialize(u, p)
       @url = 'https://apihost1.placesscout.com'
-      $auth = 'Basic ' + Base64.encode64(u + ':' + p).chomp      
+      @auth = 'Basic ' + Base64.encode64(u + ':' + p).chomp      
     end
 
     def parse_json(response)
@@ -28,11 +28,11 @@ module PlacesScout
         params = {}
         params[:page] = opts[:page] || 1
         params[:size] = opts[:size] || MAX_PAGE_SIZE
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body['total'] || 1
+        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
         total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
     
         while total_pages > 0      
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body
+          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
           results.push(response)
           params[:page] += 1 unless opts[:page]
           total_pages -= 1
@@ -50,11 +50,11 @@ module PlacesScout
       params[:size] = opts[:size] || MAX_PAGE_SIZE
       params[:clientid] = opts[:clientid]
       location = opts[:locationid]
-      total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body['total'] || 1
+      total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
       total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
 
       while total_pages > 0
-        response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body
+        response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
         results.push(response)
         params[:page] += 1 unless opts[:page]
         total_pages -= 1
@@ -70,11 +70,11 @@ module PlacesScout
         params[:size] = opts[:size] || MAX_PAGE_SIZE
         params[:clientid] = opts[:clientid] 
         path =  "/clientfolders"
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body['total'] || 1
+        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
         total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
 
         while total_pages > 0      
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body 
+          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body 
           results.push(response)
           params[:page] += 1 unless opts[:page]
           total_pages -= 1
@@ -114,11 +114,11 @@ module PlacesScout
         params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
         params[:page] = opts[:page] || 1
         params[:size] = opts[:size] || MAX_PAGE_SIZE
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body['total'] || 1
+        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
         total_pages = (opts[:page] || opts[:locationid]) ? 1 : (total_size/params[:size].to_f).ceil        
         
         while total_pages > 0  
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body
+          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
           results.push(response)
           params[:page] += 1 unless opts[:page]
           total_pages -= 1
@@ -131,7 +131,7 @@ module PlacesScout
       params = {}
       reportid = "/#{opts[:reportid]}" || ""
       path = "/status/getreportstatus"
-      response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => $auth)).body
+      response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
     end
 
 
