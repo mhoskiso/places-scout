@@ -11,34 +11,84 @@ module PlacesScout
   # RestClient.log = 'stdout' #Debugging API calls
     MAX_PAGE_SIZE = '100'
 
-    def initialize(u, p)
+    def initialize(opts = {})
       @url = 'https://apihost1.placesscout.com'
-      @auth = 'Basic ' + Base64.encode64(u + ':' + p).chomp      
+      @auth = 'Basic ' + Base64.encode64(opts[:username] + ':' + opts[:password]).chomp      
     end
 
     def parse_json(response)
-      body = JSON.parse(response.to_str) if response.code == 200
+      body = JSON.parse(response.to_str) if response.code == 200 || response.code == 201
       OpenStruct.new(code: response.code, body: body)
+    end
+
+    def set_params(opts = {})
+      params = {}
+      #Result params
+        params[:size] = opts[:size] || MAX_PAGE_SIZE
+        params[:path] = opts[:path] if opts[:path]
+        params[:page] = opts[:page] || 1
+      #Client params
+        params[:Name] = opts[:Name] if opts[:Name]  #String
+        params[:CustomClientId] = opts[:CustomClientId] if opts[:CustomClientId] #String
+        params[:PrimaryEmail] = opts[:PrimaryEmail] if opts[:PrimaryEmail] #String
+        params[:Website] = opts[:Website] if opts[:Website] #String
+        params[:Industry] = opts[:Industry] if opts[:Industry]  #String
+        params[:Categories] = opts[:Categories] if opts[:Categories] #List
+        params[:GoogleAccountId] = opts[:GoogleAccountId] if opts[:GoogleAccountId] #String
+        params[:GoogleWebPropertyId] = opts[:GoogleWebPropertyId] if opts[:GoogleWebPropertyId] #String
+        params[:GoogleProfileId] = opts[:GoogleProfileId] if opts[:GoogleProfileId]  #String
+        params[:GoogleAnalyticsReportSections] = opts[:GoogleAnalyticsReportSections] if opts[:GoogleAnalyticsReportSections] #List
+
+      return params
+    end
+
+    def get_responses(opts = {})
+      responses = []
+      params = set_params(opts)
+      response = parse_json(RestClient.get(@url+opts[:path], params: params,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
+      
+      total_records = response["total"] || 1
+      size = response["size"] || 1
+      total_pages = (total_records.to_f/size).ceil || 1             
+
+      while total_pages > 0
+        response = (opts[:data]) ? response[opts[:data]] : response 
+        responses.push(response)
+        params[:page] += 1 unless opts[:page]
+        total_pages -= 1     
+        response = parse_json(RestClient.get(@url+params[:path], params: params,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body unless total_pages < 1            
+      end
+
+      return responses.flatten! || responses
     end
 
 # /clients
     def get_clients( opts = {})
-        path = "/clients/#{opts[:clientid]}"
-        results = []
-        params = {}
-        params[:page] = opts[:page] || 1
-        params[:size] = opts[:size] || MAX_PAGE_SIZE
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-        total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
-    
-        while total_pages > 0      
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
-          results.push(response)
-          params[:page] += 1 unless opts[:page]
-          total_pages -= 1
-        end
+        opts[:path] = "/clients/#{opts[:clientid]}"
+        opts[:data] = "items" unless opts[:clientid]       
+        return get_responses(opts) 
+    end
 
-        return results
+    def create_client( opts = {})
+        params = set_params(opts)
+        path = "/clients"
+        response = parse_json(RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth))
+        return response 
+    end
+
+    def update_client( opts = {})
+        params = set_params(opts)
+        path = "/clients/#{opts[:clientid]}"
+        return parse_json(RestClient.put(@url+path, params,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body 
+    end
+
+    def delete_client ( opts = {} )
+      if opts[:clientid]
+        path = "/clients/#{opts[:clientid]}"
+        return RestClient.delete(@url+path, :Authorization => @auth)
+      else
+        return "Must pass client id"
+      end
     end
 
 # Client Locations
@@ -50,16 +100,16 @@ module PlacesScout
       params[:size] = opts[:size] || MAX_PAGE_SIZE
       params[:clientid] = opts[:clientid]
       location = opts[:locationid]
-      total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-      total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
+      # total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
+      # total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
 
-      while total_pages > 0
-        response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
-        results.push(response)
-        params[:page] += 1 unless opts[:page]
-        total_pages -= 1
-      end
-      return results
+      # while total_pages > 0
+      #   response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
+      #   results.push(response)
+      #   params[:page] += 1 unless opts[:page]
+      #   total_pages -= 1
+      # end
+      # return results
     end
 
 # /folders
@@ -70,16 +120,16 @@ module PlacesScout
         params[:size] = opts[:size] || MAX_PAGE_SIZE
         params[:clientid] = opts[:clientid] 
         path =  "/clientfolders"
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-        total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
+        # total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
+        # total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
 
-        while total_pages > 0      
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body 
-          results.push(response)
-          params[:page] += 1 unless opts[:page]
-          total_pages -= 1
-        end
-        return results
+        # while total_pages > 0      
+        #   response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body 
+        #   results.push(response)
+        #   params[:page] += 1 unless opts[:page]
+        #   total_pages -= 1
+        # end
+        # return results
     end
 
 # /rankingreports
