@@ -34,7 +34,11 @@ testcon = PlacesScout::Api.new("username", "password")
 ### Clients
 ```ruby
 testcon.get_clients()   # Grab all clients. 
+testcon.get_clients(:names_and_ids => true) # Just get names and ids
 testcon.get_clients(:clientid => 'client-id') #Grab specific client
+testcon.create_client(:Name => 'test company',:CustomClientId => 'XXX' , :PrimaryEmail => 'test@test.com', :Website => 'www.test.com')
+testcon.update_client(:clientid => 'client-id', :Name => 'test company',:CustomClientId => 'XXX' , :PrimaryEmail => 'test@test.com', :Website => 'www.test.com')
+testcon.delete_client(:clientid => 'client-id')
 ```
 ### Locations
 ```ruby

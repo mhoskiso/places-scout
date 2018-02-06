@@ -38,6 +38,13 @@ module PlacesScout
         params[:GoogleWebPropertyId] = opts[:GoogleWebPropertyId] if opts[:GoogleWebPropertyId] #String
         params[:GoogleProfileId] = opts[:GoogleProfileId] if opts[:GoogleProfileId]  #String
         params[:GoogleAnalyticsReportSections] = opts[:GoogleAnalyticsReportSections] if opts[:GoogleAnalyticsReportSections] #List
+      #Location params
+        params[:clientid] = opts[:clientid] if opts[:clientid]
+        params[:locationid] = opts[:locationid] if opts[:locationid]
+      #Ranking Reports
+        params[:Keyword] = opts[:keywordserpscreenshot] if opts[:keywordserpscreenshot]
+        params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
+     
 
       return params
     end
@@ -64,7 +71,7 @@ module PlacesScout
 
 # /clients
     def get_clients( opts = {})
-        opts[:path] = "/clients/#{opts[:clientid]}"
+        opts[:path] = "/clients/#{opts[:clientid] || ((opts[:names_and_ids]) ? "namesandids" : "")}"
         opts[:data] = "items" unless opts[:clientid]       
         return get_responses(opts) 
     end
@@ -93,43 +100,20 @@ module PlacesScout
 
 # Client Locations
     def get_client_locations( opts = {})
-      path = "/clientlocations/#{opts[:locationid]}"
-      results = []
-      params = {}
-      params[:page] = opts[:page] || 1
-      params[:size] = opts[:size] || MAX_PAGE_SIZE
-      params[:clientid] = opts[:clientid]
-      location = opts[:locationid]
-      # total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-      # total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
+      opts[:path] = "/clientlocations/#{opts[:locationid]}"
+      opts[:data] = "items" unless opts[:locationid]   
+      return get_responses(opts) 
+    end
 
-      # while total_pages > 0
-      #   response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
-      #   results.push(response)
-      #   params[:page] += 1 unless opts[:page]
-      #   total_pages -= 1
-      # end
-      # return results
+    def create_client_location( opts = {})
+
     end
 
 # /folders
-    def get_client_folders( opts = {})
-        results = []
-        params = {}
-        params[:page] = opts[:page] || 1
-        params[:size] = opts[:size] || MAX_PAGE_SIZE
-        params[:clientid] = opts[:clientid] 
-        path =  "/clientfolders"
-        # total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-        # total_pages = (opts[:page]) ? 1 : (total_size/params[:size].to_f).ceil  
-
-        # while total_pages > 0      
-        #   response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body 
-        #   results.push(response)
-        #   params[:page] += 1 unless opts[:page]
-        #   total_pages -= 1
-        # end
-        # return results
+    def get_client_folders( opts = {})  
+      opts[:path] =  "/clientfolders"
+      opts[:data] = "items"
+      return get_responses(opts) 
     end
 
 # /rankingreports
@@ -160,8 +144,7 @@ module PlacesScout
                  end
 
         path = (opts[:clientid] && params[:locationid] == "" && all == "") ? "/rankingreports/#{opts[:clientid]}/allbyclient" : "/rankingreports#{all}#{reportid}#{rundates}#{runs}#{newest}#{runid}#{summary}#{historical}#{keywords}#{keywordresults}#{keywordresultsid}#{keywordserpscreenshot}"     
-        params[:Keyword] = opts[:keywordserpscreenshot] if opts[:keywordserpscreenshot]
-        params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
+   
         params[:page] = opts[:page] || 1
         params[:size] = opts[:size] || MAX_PAGE_SIZE
         total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
@@ -174,6 +157,25 @@ module PlacesScout
           total_pages -= 1
         end
         return results     
+    end
+
+    #Reputation Reports
+
+    def get_reputation_reports ( opts = {})
+      opts[:path] = "/reputationreports/"
+
+      if opts[:clientid]
+       opts[:path] += "#{opts[:clientid]}/allbyclient"
+      elsif opts[:reportid]
+        opts[:path] += "#{opts[:reportid]}/"
+        opts[:path] += "#{opts[:historical] ? "historical" : ""}" unless opts[:newreviews]
+        opts[:path] += "#{opts[:newreviews] ? "newreviews" : ""}" unless opts[:historical]
+        opts[:path] += "#{opts[:reviews] ? "reviews" : ""}" unless opts[:historical] || opts[:newreviews]
+      end
+
+      opts[:data] = "items" unless (opts[:reportid] && opts[:reviews].nil?)
+      return get_responses(opts) 
+
     end
 
     def get_status( opts = {})
