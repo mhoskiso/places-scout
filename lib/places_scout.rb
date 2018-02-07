@@ -44,6 +44,8 @@ module PlacesScout
       #Ranking Reports
         params[:Keyword] = opts[:keywordserpscreenshot] if opts[:keywordserpscreenshot]
         params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
+      #Reputation Reports
+        params[:FullScrape] = opts[:FullScrape] if opts[:FullScrape]
      
 
       return params
@@ -118,45 +120,47 @@ module PlacesScout
 
 # /rankingreports
       def get_ranking_reports( opts = {})
-        results = []
-        params = {}
-        reportid = "/#{opts[:reportid]}" || ""
-        params[:locationid] = opts[:locationid] || ""
-        params[:clientid] = opts[:clientid] || ""
-        all = (opts[:all]) ? "/all" : ""
-        historical = (opts[:historical] && opts[:reportid] && all == "") ? "/historical" : ""
-        keywords = (opts[:historical] && opts[:reportid] && opts[:keywords] && all == "") ? "/keywords" : ""
-        rundates = (opts[:rundates] && opts[:reportid] && all == "") ? "/rundatesandids" : ""
-        runs = (opts[:runs] && opts[:reportid] && rundates == "" && all == "") ? "/runs" : ""
-        runid = (opts[:runid] && opts[:runs] && rundates == "" && all == "") ? "/#{opts[:runid]}" : ""
-        summary = (opts[:summary] && opts[:runid] && opts[:runs] && rundates == "" && all == "") ? "/summarymetrics" : ""
-        keywordresults = (opts[:keywordresults] && opts[:runid] && opts[:runs] && opts[:reportid] && rundates =="" && summary == "" && all == "") ? "/keywordsearchresults" : ""
-        keywordresultsid = (opts[:keywordresultsid] && opts[:keywordresults] && opts[:runid] && opts[:runs] && opts[:reportid] && rundates =="" && summary == "" && all == "") ? "/#{opts[:keywordresultsid]}" : ""
-        keywordserpscreenshot = (opts[:runid] && opts[:runs] && opts[:reportid] && opts[:googlelocation] && rundates == "" && keywordresults == "" && keywordresultsid == "" && summary == "" && all == "") ? "/keywordserpscreenshot" : ""
-        
-        newest = case opts[:newest]
-                  when opts[:newest] = true  
-                      "/newest"
-                  when opts[:newest] = false
-                      "/oldest"
-                  else
-                      ""
-                 end
 
-        path = (opts[:clientid] && params[:locationid] == "" && all == "") ? "/rankingreports/#{opts[:clientid]}/allbyclient" : "/rankingreports#{all}#{reportid}#{rundates}#{runs}#{newest}#{runid}#{summary}#{historical}#{keywords}#{keywordresults}#{keywordresultsid}#{keywordserpscreenshot}"     
-   
-        params[:page] = opts[:page] || 1
-        params[:size] = opts[:size] || MAX_PAGE_SIZE
-        total_size = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body['total'] || 1
-        total_pages = (opts[:page] || opts[:locationid]) ? 1 : (total_size/params[:size].to_f).ceil        
-        
-        while total_pages > 0  
-          response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
-          results.push(response)
-          params[:page] += 1 unless opts[:page]
-          total_pages -= 1
+        opts[:path] = "/rankingreports/"
+
+        if opts[:clientid]
+          opts[:path] += "#{opts[:clientid]}/allbyclient"
+        elsif opts[:reportid]
+          opts[:path] += "#{opts[:reportid]}/"
+            if opts[:historical]
+              opts[:path] += "historical"
+              opts[:path] += "/keywords" if opts[:keywords]
+            elsif  opts[:rundatesandids]
+              opts[:path] += "rundatesandids"
+            elsif opts[:runs] || opts[:reportRunId]
+              opts[:path] += "runs"
+              if opts[:reportRunId]
+                opts[:path] += "/#{opts[:reportRunId]}"
+                opts[:path] += "/keywordsearchresults" if opts[:keywordsearchresults]
+                opts[:path] += "/#{opts[:KeywordSearchResultsId]}" if opts[:KeywordSearchResultsId]
+                opts[:path] += "/summarymetrics" if opts[:summarymetrics]
+              end
+            end 
+        else
+          opts[:path] += "all"
         end
-        return results     
+  
+        opts[:data] = "items" unless (opts[:reportid] && opts[:rundatesandids].nil? && opts[:keywordsearchresults].nil?) || opts[:KeywordSearchResultsId]
+
+        return get_responses(opts)            
+    end
+
+    def run_ranking_report( opts = {})
+      path = "/rankingreports/#{opts[:reportid]}/runreport"
+      params = {:ReportID => opts[:reportid]}
+      response = RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)
+      return response 
+    end
+
+    def delete_ranking_report ( opts = {} )
+      path = "/rankingreports/#{opts[:reportid]}"
+      path += "/runs/#{opts[:reportRunId]}" if opts[:reportRunId]
+      return RestClient.delete(@url+path, :Authorization => @auth)   
     end
 
     #Reputation Reports
@@ -168,14 +172,42 @@ module PlacesScout
        opts[:path] += "#{opts[:clientid]}/allbyclient"
       elsif opts[:reportid]
         opts[:path] += "#{opts[:reportid]}/"
-        opts[:path] += "#{opts[:historical] ? "historical" : ""}" unless opts[:newreviews]
-        opts[:path] += "#{opts[:newreviews] ? "newreviews" : ""}" unless opts[:historical]
-        opts[:path] += "#{opts[:reviews] ? "reviews" : ""}" unless opts[:historical] || opts[:newreviews]
+          if opts[:historical]
+            opts[:path] += "historical"
+          elsif opts[:newreviews]
+            opts[:path] += "newreviews" 
+          elsif opts[:reviews] || opts[:source] 
+            opts[:path] += "reviews" 
+            opts[:path] += "/#{opts[:source]}"if opts[:source] 
+          elsif  opts[:rundatesandids]
+            opts[:path] += "rundatesandids" 
+          elsif opts[:runs] || opts[:reportRunId]
+            opts[:path] += "runs"
+            opts[:path] += "/#{opts[:reportRunId]}" if opts[:reportRunId]
+            opts[:path] += "/newest" if opts[:newest]
+            opts[:path] += "/oldest" if opts[:oldest]
+          end
+
+      else
+        opts[:path] += "all"
       end
 
-      opts[:data] = "items" unless (opts[:reportid] && opts[:reviews].nil?)
+      opts[:data] = "items" unless (opts[:reportid] && opts[:reviews].nil? && opts[:rundatesandids].nil?)
       return get_responses(opts) 
 
+    end
+
+    def run_reputation_report( opts = {})
+      path = "/reputationreports/#{opts[:reportid]}/runreport"
+      params = {:ReportID => opts[:reportid], :FullScrape => opts[:FullScrape] }
+      response = RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)
+      return response 
+    end
+
+    def delete_reputation_report ( opts = {} )
+      path = "/reputationreports/#{opts[:reportid]}"
+      path += "/runs/#{opts[:reportRunId]}" if opts[:reportRunId]
+      return RestClient.delete(@url+path, :Authorization => @auth)   
     end
 
     def get_status( opts = {})
