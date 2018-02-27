@@ -34,6 +34,7 @@ module PlacesScout
         params[:Website] = opts[:Website] if opts[:Website] #String
         params[:Industry] = opts[:Industry] if opts[:Industry]  #String
         params[:Categories] = opts[:Categories] if opts[:Categories] #List
+        params[:ClientYextSettings] = opts[:ClientYextSettings] if opts[:ClientYextSettings]
         params[:GoogleAccountId] = opts[:GoogleAccountId] if opts[:GoogleAccountId] #String
         params[:GoogleWebPropertyId] = opts[:GoogleWebPropertyId] if opts[:GoogleWebPropertyId] #String
         params[:GoogleProfileId] = opts[:GoogleProfileId] if opts[:GoogleProfileId]  #String
@@ -41,12 +42,30 @@ module PlacesScout
       #Location params
         params[:clientid] = opts[:clientid] if opts[:clientid]
         params[:locationid] = opts[:locationid] if opts[:locationid]
+        params[:BusinessName] = opts[:BusinessName] if opts[:BusinessName]
+        params[:LocationName] = opts[:LocationName] if opts[:LocationName]
+        params[:StreetAddress] = opts[:StreetAddress] if opts[:StreetAddress]
+        params[:StreetAddress2] = opts[:StreetAddress2] if opts[:StreetAddress]
+        params[:City] = opts[:City] if opts[:City]
+        params[:State] = opts[:State] if opts[:State]
+        params[:Zip] = opts[:Zip] if opts[:Zip]
+        params[:Country] = opts[:Country] if opts[:Country]
+        params[:Phone] = opts[:Phone] if opts[:Phone]
+        params[:Email] = opts[:Email] if opts[:Email]
+        params[:CustomLocationId] = opts[:CustomLocationId] if opts[:CustomLocationId]
+        params[:Region] = opts[:Region] if opts[:Region]
+        params[:StoreNumber] = opts[:StoreNumber] if opts[:StoreNumber]
+        params[:PlusLocalPageLink] = opts[:PlusLocalPageLink] if opts[:PlusLocalPageLink]
+        params[:ListingSites] = opts[:ListingSites] if opts[:ListingSites]
+        params[:YextApiKey] = opts[:YextApiKey] if opts[:YextApiKey]
+        params[:YextCustomerId] = opts[:YextCustomerId] if opts[:YextCustomerId]
+        params[:YextLocationId] = opts[:YextLocationId] if opts[:YextLocationId]
+        params[:LocationGroupId] = opts[:LocationGroupId] if opts[:LocationGroupId]
       #Ranking Reports
         params[:Keyword] = opts[:keywordserpscreenshot] if opts[:keywordserpscreenshot]
         params[:GoogleLocation] = opts[:googlelocation] if opts[:googlelocation]
       #Reputation Reports
-        params[:FullScrape] = opts[:FullScrape] if opts[:FullScrape]
-     
+        params[:FullScrape] = opts[:FullScrape] if opts[:FullScrape]     
 
       return params
     end
@@ -108,7 +127,19 @@ module PlacesScout
     end
 
     def create_client_location( opts = {})
+      params = set_params(opts)
+      path = "/clientlocations"
+      response = parse_json(RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth))
+      return response 
+    end
 
+    def delete_client_location ( opts = {} )
+      if opts[:LocationId]
+        path = "/clientlocations/#{opts[:LocationId]}"
+        return RestClient.delete(@url+path, :Authorization => @auth)
+      else
+        return "Must pass location id"
+      end
     end
 
 # /folders
@@ -118,6 +149,13 @@ module PlacesScout
       return get_responses(opts) 
     end
 
+# /combinedreports
+def get_combined_reports( opts = {})
+  opts[:path] =  "/combinedclientreports"
+  opts[:data] = "items"
+  return get_responses(opts) 
+end
+
 # /rankingreports
       def get_ranking_reports( opts = {})
 
@@ -125,40 +163,40 @@ module PlacesScout
 
         if opts[:clientid]
           opts[:path] += "#{opts[:clientid]}/allbyclient"
-        elsif opts[:reportid]
-          opts[:path] += "#{opts[:reportid]}/"
+        elsif opts[:ReportId]
+          opts[:path] += "#{opts[:ReportId]}/"
             if opts[:historical]
               opts[:path] += "historical"
               opts[:path] += "/keywords" if opts[:keywords]
             elsif  opts[:rundatesandids]
               opts[:path] += "rundatesandids"
             elsif opts[:runs] || opts[:reportRunId]
-              opts[:path] += "runs"
-              if opts[:reportRunId]
+              opts[:path] += "runs/#{opts[:age]}"
+              if opts[:reportRunId] && opts[:age].nil?
                 opts[:path] += "/#{opts[:reportRunId]}"
                 opts[:path] += "/keywordsearchresults" if opts[:keywordsearchresults]
                 opts[:path] += "/#{opts[:KeywordSearchResultsId]}" if opts[:KeywordSearchResultsId]
                 opts[:path] += "/summarymetrics" if opts[:summarymetrics]
               end
             end 
-        else
+        elsif opts[:all]
           opts[:path] += "all"
         end
   
-        opts[:data] = "items" unless (opts[:reportid] && opts[:rundatesandids].nil? && opts[:keywordsearchresults].nil?) || opts[:KeywordSearchResultsId]
+        opts[:data] = "items" unless (opts[:ReportId] && opts[:runs].nil? && opts[:rundatesandids].nil? && opts[:keywordsearchresults].nil?) || opts[:KeywordSearchResultsId]
 
         return get_responses(opts)            
     end
 
     def run_ranking_report( opts = {})
-      path = "/rankingreports/#{opts[:reportid]}/runreport"
-      params = {:ReportID => opts[:reportid]}
+      path = "/rankingreports/#{opts[:ReportId]}/runreport"
+      params = {:ReportId => opts[:ReportId]}
       response = RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)
       return response 
     end
 
     def delete_ranking_report ( opts = {} )
-      path = "/rankingreports/#{opts[:reportid]}"
+      path = "/rankingreports/#{opts[:ReportId]}"
       path += "/runs/#{opts[:reportRunId]}" if opts[:reportRunId]
       return RestClient.delete(@url+path, :Authorization => @auth)   
     end
@@ -170,8 +208,8 @@ module PlacesScout
 
       if opts[:clientid]
        opts[:path] += "#{opts[:clientid]}/allbyclient"
-      elsif opts[:reportid]
-        opts[:path] += "#{opts[:reportid]}/"
+      elsif opts[:ReportId]
+        opts[:path] += "#{opts[:ReportId]}/"
           if opts[:historical]
             opts[:path] += "historical"
           elsif opts[:newreviews]
@@ -192,20 +230,20 @@ module PlacesScout
         opts[:path] += "all"
       end
 
-      opts[:data] = "items" unless (opts[:reportid] && opts[:reviews].nil? && opts[:rundatesandids].nil?)
+      opts[:data] = "items" unless (opts[:ReportId] && opts[:reviews].nil? && opts[:rundatesandids].nil?)
       return get_responses(opts) 
 
     end
 
     def run_reputation_report( opts = {})
-      path = "/reputationreports/#{opts[:reportid]}/runreport"
-      params = {:ReportID => opts[:reportid], :FullScrape => opts[:FullScrape] }
+      path = "/reputationreports/#{opts[:ReportId]}/runreport"
+      params = set_params(opts)
       response = RestClient.post(@url+path, params ,:content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)
       return response 
     end
 
     def delete_reputation_report ( opts = {} )
-      path = "/reputationreports/#{opts[:reportid]}"
+      path = "/reputationreports/#{opts[:ReportId]}"
       path += "/runs/#{opts[:reportRunId]}" if opts[:reportRunId]
       return RestClient.delete(@url+path, :Authorization => @auth)   
     end
@@ -213,7 +251,6 @@ module PlacesScout
     def get_status( opts = {})
       results = []
       params = {}
-      reportid = "/#{opts[:reportid]}" || ""
       path = "/status/getreportstatus"
       response = parse_json(RestClient.get(@url+path, params: params, :content_type => 'application/json', :accept => 'application/json', :Authorization => @auth)).body
     end
